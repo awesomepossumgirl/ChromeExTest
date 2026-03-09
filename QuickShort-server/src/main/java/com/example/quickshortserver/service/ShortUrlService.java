@@ -1,10 +1,8 @@
 package com.example.quickshortserver.service;
-
-import com.example.quickshortserver.model.ShortUrl;
-import com.example.quickshortserver.repository.ShortUrlRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -24,37 +22,30 @@ public class ShortUrlService {
         return UUID.randomUUID().toString().substring(0, 8);
     }
     */
-    private final ShortUrlRepository repository;
 
-    // Repository 주입
-    public ShortUrlService(ShortUrlRepository repository) {
-        this.repository = repository;
-    }
+    // 메모리 저장소
+    private final Map<String, String> storage = new HashMap<>();
 
     // 단축 URL 생성 + DB 저장
     public String shorten(String originalUrl) {
         String hash = generateRandomHash();
 
-        // 중복체크 (같은 hash가 DB에 있으면 새로 생성)
-        while (repository.findByHash(hash).isPresent()) {
+        // 중복체크
+        while (storage.containsKey(hash)) {
             hash = generateRandomHash();
         }
 
-        ShortUrl shortUrl = new ShortUrl(hash, originalUrl);
-        repository.save(shortUrl);
+        storage.put(hash, originalUrl);
 
         // 나중에 도메인 붙여서 단축 URL 반환
         // https://<domain>/<hash>;
         return hash;
     }
 
-    // 단축 URL로 원본 URL 조회
-    public String getOriginalUrl(String hash) {
-        Optional<ShortUrl> result = repository.findByHash(hash);
-        return result.map(ShortUrl::getOriginal)
-                .orElseThrow(() -> new RuntimeException("단축 URL을 찾을 수 없습니다."));
-    }
     private String generateRandomHash() {
-        return UUID.randomUUID().toString().substring(0, 8);
+        return UUID.randomUUID()
+                .toString()
+                .replace("-", "")
+                .substring(0, 8);
     }
 }
